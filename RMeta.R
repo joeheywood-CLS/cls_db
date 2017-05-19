@@ -108,7 +108,8 @@ prepareSAV <- function(f, nm, prepHome = "/home/joe/mcs/dbprep/", drop = FALSE) 
     df <- st$dat
     ## How to deal with missing values? ""? "."? "<NA>"
 	## write delimited file with | and no headers
-    write_delim(df, file.path(prepHome, paste0(nm, "_data.dat")), delim = "|", na="", col_names = FALSE )
+    write_delim(df, file.path(prepHome, paste0(nm, "_data.dat")), delim = "|", 
+				na="", col_names = FALSE )
 }
 
 
