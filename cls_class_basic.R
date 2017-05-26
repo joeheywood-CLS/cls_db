@@ -43,7 +43,11 @@ savToCLS_v <- function(n, df) {
 			ctg@missing[which(ctg@code %in% att$na_values)] <- TRUE
 		}
 	}
-	new("cls_v", as.numeric(df[[n]]), vName = n, label = att$label, ctg = ctg)
+	if(is.numeric(x)) { 
+		new("cls_v", as.numeric(x), vName = n, label = att$label, ctg = ctg)
+	} else if(is.character(x)) { 
+		new("cls_c", as.character(x), vName = n, label = att$label, ctg = ctg)
+	}
 }
 
 

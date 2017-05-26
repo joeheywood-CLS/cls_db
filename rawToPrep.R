@@ -10,7 +10,7 @@ library(jsonlite)
 library(readr)
 
 source("/home/joe/cls_db/cls_class_basic.R")
-f <- "/home/joe/mcs/raw/mcs5_cm_derived.sav"
+f <- "/home/joe/mcs/raw/mcs5_cm_interview.sav"
 
 ################ Only "public" function here should be prepareSav #############
 
@@ -41,15 +41,7 @@ getDataFromSav <- function(flnm) {
 		dat[[cln]][which(is.na(dat[[cln]]))] <- -42
 		cls_df[[cln]] <- savToCLS_v(cln, dat)
 	}
-	new("cls_df", as.data.frame(cls_df))
-}
-
-getMetaHaven <- function(flnm) {
-    fl <- read_sav(flnm, user_na = TRUE)
-	for(cln in colnames(fl)) {
-		fl[[cln]][which(is.na(fl[[cln]]))] <- -42
-	}
-    list(dat = fl, meta = lapply(names(fl), populateM, fl = fl))
+	new("cls_df", as.data.frame(cls_df, stringsAsFactors = FALSE))
 }
 
 populateM <- function(nm, fl) {

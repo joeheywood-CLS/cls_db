@@ -25,8 +25,8 @@ getDF <- function(tbl) {
 		jsn <- gsub("\\\\", "", mt[[m]][1])
 		mtObj[[m]] <- fromJSON(jsn)
 	}
-	dbDisconnect(conn)
-	list(dat = dat, mt = mt, mtObj=mtObj)
+qdbDisconnect(conn)
+qlist(dat = dat, mt = mt, mtObj=mtObj)
 }
 
 buildQuery <- function(inDF = NULL, inCSV = "") {
