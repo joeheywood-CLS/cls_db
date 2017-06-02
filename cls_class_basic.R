@@ -58,11 +58,24 @@ cls_toJSON <- function(x) {
 					   missing = x@ctg@missing)
 	out$vName <- x@vName
 	out$label <- x@label
+	rm(x)
 	jsonlite::toJSON(out)
 }
 
-cls_fromJSON <- function(j) {
-
+jsonToCls <- function(x, jsn) {
+	jsn <- gsub("\\\\", "", jsn)
+	obj <- jsonlite::fromJSON(jsn)
+	ctg <- new("ctg")
+	if(!is.null(obj$ctg)) {
+		ctg@code <- obj$ctg$code
+		ctg@label <- obj$ctg$label
+		ctg@missing <- obj$ctg$missing
+	}
+	if(is.numeric(x)) { 
+		new("cls_v", as.numeric(x), vName = obj$vName, label = obj$label, ctg = ctg)
+	} else if(is.character(x)) { 
+		new("cls_c", as.character(x), vName = obj$vName, label = obj$label, ctg = ctg)
+	}
 }
 
 

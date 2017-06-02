@@ -5,43 +5,16 @@
 
 ## To begin with, using MonetDB, so .dat files use "|" as delimiter
 
-library(haven)
-library(jsonlite)
-library(readr)
-
-source("/home/joe/cls_db/cls_class_basic.R")
-f <- "/home/joe/mcs/raw/mcs5_cm_interview.sav"
-
-################ Only "public" function here should be prepareSav #############
-
-prepareSAV <- function(f, nm, prepHome = "/home/joe/mcs/dbprep/", drop = FALSE) { 
-	## args: f - sav file, nm - name of table (no spaces)
-    # create directory
-    prepHome <- paste0(prepHome, nm)
-    dir.create(prepHome)
-	## get data from file
-    st <- getDataFromSav(f)
-    ## create schema ##
-    schm <- createSchemaFromCLS_df(st, nm, prepHome, drop)
-    writeLines(schm, file.path(prepHome, paste0(nm, "_schema.sql")) )
-    ## create meta table sql and insert json
-    mtSch <- createMetaSchema(st, nm, drop)
-    writeLines(mtSch, file.path(prepHome, paste0(nm, "_m_schema.sql")) )
-	## write delimited file with | and no headers
-    write_delim(st, file.path(prepHome, paste0(nm, "_data.dat")), delim = "|", 
-				na="", col_names = FALSE )
-}
-
+ 
 ###############################################################################
 
 getDataFromSav <- function(flnm) {
-	dat <-read_sav(flnm, user_na = TRUE)
-	cls_df <- list() 
+	dat <- read_sav(flnm, user_na = TRUE)
 	for(cln in colnames(dat)) {
 		dat[[cln]][which(is.na(dat[[cln]]))] <- -42
-		cls_df[[cln]] <- savToCLS_v(cln, dat)
+		dat[[cln]] <- savToCls(dat[[cln]], cln)
 	}
-	new("cls_df", as.data.frame(cls_df, stringsAsFactors = FALSE))
+	dat
 }
 
 populateM <- function(nm, fl) {
@@ -91,7 +64,9 @@ createSchemaFromCLS_df <- function(l, tblNm, flPth, drop = FALSE) {
 	sql_drop <- ifelse(drop == TRUE, paste0("DROP TABLE ", tblNm, ";"), "")
     sql_create <- sprintf("CREATE TABLE %s (", tblNm)
     sql_joins <- vapply(l, function(itm) {
-        sprintf("%s %s", itm@vName, getDBType(itm))
+		att <- attributes(itm)
+        ot <- sprintf("%s %s", att$vName, getDBType(itm))
+		ot
     }, "")
     end <- ");"
 	flPth <- paste0(flPth, "/", tblNm, "_data.dat")
@@ -101,16 +76,17 @@ createSchemaFromCLS_df <- function(l, tblNm, flPth, drop = FALSE) {
 }
 
 
-createMetaSchema <- function(l, tblNm, drop = FALSE) {
+createMetaSchema <- function(a, tblNm, drop = FALSE) {
 	first <- ifelse(drop == TRUE, paste0("DROP TABLE m_", tblNm, ";"), "")
     start <- sprintf("CREATE TABLE m_%s (", tblNm)
-    mid <- vapply(l, function(itm) {
-        sprintf("%s text", itm@vName)
+	save(a, tblNm, drop, first, start, file = "debug.Rda")
+    mid <- vapply(a, function(itm) {
+        sprintf("%s text", itm$vName)
     }, "")
     end <- ");"
     insSt <- sprintf("INSERT INTO m_%s VALUES (", tblNm)
-    insts <- lapply(l, function(itm) {
-        jstr <- cls_toJSON(itm)
+    insts <- lapply(a, function(itm) {
+        jstr <- jsonlite::toJSON(a) 
 		jstr <- gsub("'", " ", jstr)
 		sprintf("'%s'", jstr)
     })
