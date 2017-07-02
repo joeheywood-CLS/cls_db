@@ -1,6 +1,8 @@
 library(haven)
-library(jsonlite)
+library(rjson)
 library(readr)
+library(MonetDB.R)
+library(DBI)
 
 dd <- dir("/home/db/mcs/raw", full.names = TRUE, pattern = ".sav")
 
@@ -9,7 +11,17 @@ dd <- dir("/home/db/mcs/raw", full.names = TRUE, pattern = ".sav")
 addRec <- function(f) {
 	### wrapper around createSchema ###
 	## Should also include tests/reports
-	createSchema(f)
+	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
+					  user="monetdb", password="monetdb")               # 
+	tbl <- createSchema(f)
+	buildFl <- sprintf("/home/db/mcs/dbprep/%s/%s_build.sql", tbl, tbl)
+	cmd <- sprintf("mclient -d mcs -i %s", buildFl)
+	hh <- system(cmd, intern = TRUE)
+	newTab <- dbGetQuery(conn, paste0("SELECT * FROM ", tbl))
+	rawTab <- getDataFromSav(f)
+	chk <- checkAvgs(rawTab, newTab)
+	dbDisconnect(conn)
+	list(table = tbl, check = chk, cmd = cmd, res = hh)
 }
 
 addAllRecs <- function(dr) {
@@ -33,12 +45,9 @@ createSchema <- function(f, prepHome = "/home/db/mcs/dbprep") {
 	datFl <- file.path(prepHome, paste0(tblNm, ".dat"))
 	metFl <- file.path(prepHome, paste0(tblNm, "_meta.dat"))
 	if(!dir.exists(prepHome))dir.create(prepHome)
-	df <- read_sav(f, user_na = TRUE)
+	df <- getDataFromSav(f)
 	print(paste0("Read sav file in ", round(difftime(Sys.time(), st, unit = "secs")), " seconds"))
-	for(i in colnames(df)) { 
-		df[[i]][is.nan(df[[i]])] <- -42 
-		if("hms" %in% class(df[[i]])) df[[i]] <- as.character(df[[i]])
-	}
+	print(paste0("File has ", nrow(df), " rows and ", ncol(df), " columns"))
 	sql <- paste(readLines("/home/db/cls_db/insert_template.sql"),
 				 collapse = " \n")
 	varDefs <- vapply(colnames(df), function(x) {
@@ -46,15 +55,23 @@ createSchema <- function(f, prepHome = "/home/db/mcs/dbprep") {
 				 }, "")
 	write_delim(df, datFl, delim = "|", na = "", col_names = FALSE)
 	mt <- saveMeta(df, tblNm)
-	write_delim(mt, metFl, delim = "|", na = "{}", col_names = FALSE)
+	write.table(mt, metFl, quote = FALSE, qmethod = "escape", sep = "|", na = "{}", col.names = FALSE, row.names = FALSE)
 	sql_ins <- sprintf(sql, tblNm, paste(varDefs, collapse = ",\n"), datFl, metFl)
 	print(paste0("Finished in ", round(difftime(Sys.time(), st, unit = "secs")), " seconds"))
 	bldNm <- paste0(tblNm, "_build.sql")
 	print(paste0("mclient -d mcs -i ", tblNm, " to add to db"))
 	writeLines(sql_ins, file.path(prepHome, bldNm))
-	dim(df)
+	tblNm
 }
 
+getDataFromSav <- function(f) {
+	df <- read_sav(f, user_na = TRUE)
+	for(i in colnames(df)) { 
+		df[[i]][is.nan(df[[i]])] <- -42 
+		if("hms" %in% class(df[[i]])) df[[i]] <- as.character(df[[i]])
+	}
+	df
+}
 
 getDBType <- function(x) {
 	if(all(is.na(x))) {
@@ -86,4 +103,55 @@ getDBType <- function(x) {
 	}
 }
 
+toClsMeta <- function(vnm, vlbl, ctg, ...) {
+	y <- as.list(...)
+	out <- list(vName = vnm, vLabel = vlbl, ctg = ctg)
+	for(a in names(y)) {
+		out$a <- y[[a]]
+	}
+	out
+}
+
+updateClsRow <- function(cn, row) {
+	x <- fromJSON(row['savmeta'])
+	vnm  <- row['vrb']
+	vlbl <- ""
+	if('label' %in% names(x)) vlbl <- x$label
+	ctg <- data.frame()
+	if('labels' %in% names(x)) {
+		lb <- unlist(x$labels)
+		ctg <- data.frame(code = lb, label = names(lb), missing = FALSE)
+		ctg$missing[which(ctg$code %in% x$na_values)] <- TRUE
+	}
+	x$labels <- x$label <- x$na_values <- NULL
+
+}
+
+# checkAverages <- function(a, b) {
+#     if(!ncol(a) == ncol(b) & nrow(a) == nrow(b)) return(FALSE)
+#     vapply(1:ncol(a), cmpVects, TRUE, a = a, b = b)
+# }
+# 
+# cmpVects <- function(x, a, b) {
+#     cmp1 <- a[[x]]
+#     cmp2 <- b[[x]]
+#     if(is.character(cmp1[1]) ) {
+#         cmp1 <- vapply(cmp1, rawNumFromString, 0)
+#         cmp2 <- vapply(cmp2, rawNumFromString, 0)
+#     }
+#     cmp1 <- as.numeric(cmp1)
+#     cmp2 <- as.numeric(cmp2)
+#     smp <- sample(1:length(cmp1), round(length(cmp1) / 10))
+#     full <- all(mean(cmp1, na.rm = TRUE) == mean(cmp2, na.rm = TRUE))
+#     part <- all(mean(cmp1[smp], na.rm = TRUE) == mean(cmp2[smp], na.rm = TRUE))
+#     if(all(c(full, part)) == FALSE) {
+#         save(full, part, cmp1, cmp2, x,a, b, file = "debug.Rda")
+#         stop("NOOOO!!!")
+#     }
+#     all(c(full, part))
+# }
+# 
+# rawNumFromString <- function(s) {
+#     sum(as.numeric(charToRaw(s)))
+# }
 

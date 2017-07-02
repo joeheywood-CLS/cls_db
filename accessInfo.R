@@ -5,7 +5,8 @@ library(tidyr)
 library(MonetDB.R)
 library(DBI)
 library(jsonlite)
-
+library(DBI)
+library(MonetDB.R)
 ####
 ## Some functions:
 ## - getDF(table, col)
@@ -41,12 +42,12 @@ buildQuery <- function(inDF = NULL, inCSV = "", joins = list()) {
 	##  - list of tables
 	##  - list of columns (or *)
 	##  - list of joins: defaulting to mcsid and cm number
+	df <- inDF
 	slct <- createSelects(df)
 	jns <- createJoins(df, joins)
 	qry <- paste(c(slct, jns), collapse = " ")
 	xx <- dbGetQuery(conn, qry)
-	mqry <- getMetaQry(df)
-	mm <- dbGetQuery(conn, mqry)
+	mm <- dgetMQ(conn, df)
 	## build joins
 	## execute query
 	## save query
@@ -80,23 +81,11 @@ createJoins <- function(df, jnLst) {
 	paste(jns, collapse = " \n")
 }
 
-mtF <- function(t) {
-	if(any(nchar(t$vrb) > 0)) {
-		sl <- paste0(t$tbl, ".", t$vrb)
-	} else {
-		sl <- "*"
-	}
-	sprintf("SELECT %s FROM %s", paste(sl, collapse = ", "),
-				  t$tbl[1])
+getMQ <- function(conn, df) {
+	sl <- "SELECT * FROM jsonmeta WHERE clstable IN(%s)"
+	tbls <- paste(paste0("'", unique(df$tbl), "'"), collapse = ", " )
+	dbGetQuery(conn, sprintf(sl, tbls))
 }
-
-getMetaQry <- function(df) {
-	df$tbl <- paste0("m_", df$tbl)
-	tbx <- split(df, df$tbl)
-	slcts <- vapply(tbx, mtF, "") 
-	paste(slcts, collapse = " \n UNION \n ")
-}
-
 
 manageQueryTable <- function(df) {
 	## input: data.frame (two cols: table, vrb)
