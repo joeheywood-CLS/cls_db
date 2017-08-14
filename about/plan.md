@@ -17,5 +17,5 @@
 
 At the moment, we build queries using R programs that include using a data frame for a list of the tables and variables to retrieve. From there, it will be in memory - so you can do whatever you like with it, as part of the program you are writing.
 
-(handy SO post)[https://stackoverflow.com/questions/39169494/human-readable-hard-coding-dataframe-in-r]
+[handy SO post](https://stackoverflow.com/questions/39169494/human-readable-hard-coding-dataframe-in-r)
 
