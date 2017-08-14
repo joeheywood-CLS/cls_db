@@ -5,12 +5,13 @@ library(MonetDB.R)
 library(DBI)
 
 dd <- dir("/home/db/mcs/raw", full.names = TRUE, pattern = ".sav")
-
+source("/home/db/cls_db/check.R")
+source("/home/db/cls_db/cls_classS3.R")
 ################# only two 'public' functions ######################
 
 addRec <- function(f) {
 	### wrapper around createSchema ###
-	## Should also include tests/reports
+# Should also include tests/reports
 	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
 					  user="monetdb", password="monetdb")               # 
 	tbl <- createSchema(f)
@@ -31,9 +32,15 @@ addAllRecs <- function(dr) {
 ####################################################################
 
 saveMeta <- function(x, d) {
-    xx <- lapply(x, attributes )
-    yy <- vapply(xx, toJSON, "")
-    data.frame(clstable = d, savmeta = yy, vrb = colnames(x), clsmeta = "{}",
+    xx <- lapply(x,attributes )
+	for(xo in 1:ncol(x)) {
+		xx[[xo]]$vnm <- colnames(x)[xo]
+	}
+    yy <- vapply(xx, rjson::toJSON, "")
+	zz <- vapply(xx, function(xo) {
+					 rjson::toJSON(savToCls(xo))
+					  }, "") 
+    data.frame(clstable = d, savmeta = yy, vrb = colnames(x), clsmeta = zz,
                stringsAsFactors = FALSE)
 }
 
@@ -59,7 +66,6 @@ createSchema <- function(f, prepHome = "/home/db/mcs/dbprep") {
 	sql_ins <- sprintf(sql, tblNm, paste(varDefs, collapse = ",\n"), datFl, metFl)
 	print(paste0("Finished in ", round(difftime(Sys.time(), st, unit = "secs")), " seconds"))
 	bldNm <- paste0(tblNm, "_build.sql")
-	print(paste0("mclient -d mcs -i ", tblNm, " to add to db"))
 	writeLines(sql_ins, file.path(prepHome, bldNm))
 	tblNm
 }
@@ -103,29 +109,6 @@ getDBType <- function(x) {
 	}
 }
 
-toClsMeta <- function(vnm, vlbl, ctg, ...) {
-	y <- as.list(...)
-	out <- list(vName = vnm, vLabel = vlbl, ctg = ctg)
-	for(a in names(y)) {
-		out$a <- y[[a]]
-	}
-	out
-}
-
-updateClsRow <- function(cn, row) {
-	x <- fromJSON(row['savmeta'])
-	vnm  <- row['vrb']
-	vlbl <- ""
-	if('label' %in% names(x)) vlbl <- x$label
-	ctg <- data.frame()
-	if('labels' %in% names(x)) {
-		lb <- unlist(x$labels)
-		ctg <- data.frame(code = lb, label = names(lb), missing = FALSE)
-		ctg$missing[which(ctg$code %in% x$na_values)] <- TRUE
-	}
-	x$labels <- x$label <- x$na_values <- NULL
-
-}
 
 # checkAverages <- function(a, b) {
 #     if(!ncol(a) == ncol(b) & nrow(a) == nrow(b)) return(FALSE)
@@ -151,7 +134,17 @@ updateClsRow <- function(cn, row) {
 #     all(c(full, part))
 # }
 # 
-# rawNumFromString <- function(s) {
-#     sum(as.numeric(charToRaw(s)))
-# }
+rawNumFromString <- function(s) {
+	sum(as.numeric(charToRaw(s)))
+}
+# 
+
+resetDB <- function(conn) {
+	f <- dbListTables(conn)
+	for(tbl in f[-1]) {
+		dbSendQuery(conn, paste0("DROP TABLE ", tbl, ";"))
+	}
+	system("mclient -d mcs -i /home/db/cls_db/jsonSchm.sql", intern = TRUE)
+}
+
 

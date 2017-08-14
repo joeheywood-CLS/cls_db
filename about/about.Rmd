@@ -1,0 +1,10 @@
+---
+title: "About this project"
+author: "Joe"
+---
+
+
+## About this project
+
+This project is a prototype of a database management system to replace SiR at the Centre for Longitudinal Studies. This prototype uses data mostly available from the UK Data Archive. The data needs to be able to manage both the raw data in a regular
+

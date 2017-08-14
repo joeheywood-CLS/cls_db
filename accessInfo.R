@@ -4,7 +4,7 @@ library(knitr)
 library(tidyr)
 library(MonetDB.R)
 library(DBI)
-library(jsonlite)
+library(rjson)
 library(DBI)
 library(MonetDB.R)
 ####
@@ -37,21 +37,20 @@ buildQuery <- function(inDF = NULL, inCSV = "", joins = list()) {
 		## read from csv file
 		inDF <- read_csv(inCSV)
 	} 
-	## bld <- manageQueryTable(inDF)
-	## info needed at this point:
-	##  - list of tables
-	##  - list of columns (or *)
-	##  - list of joins: defaulting to mcsid and cm number
 	df <- inDF
 	slct <- createSelects(df)
 	jns <- createJoins(df, joins)
 	qry <- paste(c(slct, jns), collapse = " ")
 	xx <- dbGetQuery(conn, qry)
-	mm <- dgetMQ(conn, df)
-	## build joins
-	## execute query
-	## save query
-	## meta data: just use union?
+	df$find <- paste0(df$tbl, "_", df$vrb)
+	mm <- getMQ(conn, df)
+	mm$vrb <- tolower(mm$vrb)
+	mm$find <- paste0(mm$clstable, "_", mm$vrb)
+	mm <- mm[which(mm$find %in% unique(df$find)),]
+	for(cln in colnames(xx)) {
+		attributes(xx[[cln]]) <- jsonToCls(mm$clsmeta[which(mm$vrb == cln)])
+	}
+	xx
 }
 
 createSelects <- function(df) {
@@ -97,17 +96,17 @@ manageQueryTable <- function(df) {
 	list(slct = c(), tbls = tbls, joins = join )
 }
 
-createQueryDF <- function() {
-	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
-			          user="monetdb", password="monetdb")                 # 
-	dr <- dbListFields(conn, "mcs5_derived")
-	ci <- dbListFields(conn, "mcs5_cm_interview")
-	rbind(
-		  data.frame(tbl = "mcs5_derived",
-					 vrb = dr[3:7], stringsAsFactors = FALSE),
-		  data.frame(tbl = "mcs5_cm_interview",
-					 vrb = ci[3:7], stringsAsFactors = FALSE)  )
-}
+# createQueryDF <- function() {
+#     conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
+#                       user="monetdb", password="monetdb")                 # 
+#     dr <- dbListFields(conn, "mcs5_derived")
+#     ci <- dbListFields(conn, "mcs5_cm_interview")
+#     rbind(
+#           data.frame(tbl = "mcs5_derived",
+#                      vrb = dr[3:7], stringsAsFactors = FALSE),
+#           data.frame(tbl = "mcs5_cm_interview",
+#                      vrb = ci[3:7], stringsAsFactors = FALSE)  )
+# }
 
 tab <- function(x, obj) {
 	tb <- table(obj$dat[[x]])
