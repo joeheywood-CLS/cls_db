@@ -11,9 +11,8 @@ source("/home/db/cls_db/cls_classS3.R")
 
 addRec <- function(f) {
 	### wrapper around createSchema ###
-# Should also include tests/reports
-	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
-					  user="monetdb", password="monetdb")               # 
+	# Should also include tests/reports
+	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs")  # 
 	tbl <- createSchema(f)
 	buildFl <- sprintf("/home/db/mcs/dbprep/%s/%s_build.sql", tbl, tbl)
 	cmd <- sprintf("mclient -d mcs -i %s", buildFl)
@@ -53,7 +52,8 @@ createSchema <- function(f, prepHome = "/home/db/mcs/dbprep") {
 	metFl <- file.path(prepHome, paste0(tblNm, "_meta.dat"))
 	if(!dir.exists(prepHome))dir.create(prepHome)
 	df <- getDataFromSav(f)
-	print(paste0("Read sav file in ", round(difftime(Sys.time(), st, unit = "secs")), " seconds"))
+	print(paste0("Read sav file in ", round(difftime(Sys.time(), st, unit = "secs")), 
+				 " seconds"))
 	print(paste0("File has ", nrow(df), " rows and ", ncol(df), " columns"))
 	sql <- paste(readLines("/home/db/cls_db/insert_template.sql"),
 				 collapse = " \n")
@@ -62,7 +62,8 @@ createSchema <- function(f, prepHome = "/home/db/mcs/dbprep") {
 				 }, "")
 	write_delim(df, datFl, delim = "|", na = "", col_names = FALSE)
 	mt <- saveMeta(df, tblNm)
-	write.table(mt, metFl, quote = FALSE, qmethod = "escape", sep = "|", na = "{}", col.names = FALSE, row.names = FALSE)
+	write.table(mt, metFl, quote = FALSE, qmethod = "escape", sep = "|", na = "{}", 
+				col.names = FALSE, row.names = FALSE)
 	sql_ins <- sprintf(sql, tblNm, paste(varDefs, collapse = ",\n"), datFl, metFl)
 	print(paste0("Finished in ", round(difftime(Sys.time(), st, unit = "secs")), " seconds"))
 	bldNm <- paste0(tblNm, "_build.sql")

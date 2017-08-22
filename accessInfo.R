@@ -2,44 +2,45 @@ library(dplyr)
 library(readr)
 library(knitr)
 library(tidyr)
-library(MonetDB.R)
-library(DBI)
 library(rjson)
 library(DBI)
 library(MonetDB.R)
+source("cls_classS3.R")
 ####
 ## Some functions:
 ## - getDF(table, col)
 ## - listTables
 ## - tab/crosstab
 
-getDF <- function(tbl) {
+getDF <- function(tbl, vrbs = "*") {
 	## connect to database
-	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
-			          user="monetdb", password="monetdb")                 # 
-	dbListTables(conn)
+	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs")  
 	## get data (construct query)
-	dat <- dbGetQuery(conn, paste0("SELECT * FROM ", tbl, " LIMIT 1000"))
-	mt <- dbGetQuery(conn, paste0("SELECT * FROM m_", tbl ))
-	mtObj <- list()
-	for(m in colnames(mt)) {
-		jsn <- gsub("\\\\", "", mt[[m]][1])
-		mtObj[[m]] <- fromJSON(jsn)
+	if(length(vrbs) > 1) {
+		vrbs <- paste(vrbs, collapse = ", ")
+	}
+	mtd <- dbGetQuery(conn, paste0("SELECT * FROM jsonmeta WHERE clstable = '", tbl, "'"))
+	dat <- dbGetQuery(conn, paste0("SELECT ", vrbs, " FROM ", tbl))
+	for(d in colnames(dat)) {
+		mx <- which(tolower(mtd$vrb) == tolower(d))
+		attributes(dat[[d]]) <- jsonToCls(mtd$clsmeta[mx])
 	}
 	dbDisconnect(conn)
-	list(dat = dat, mt = mt, mtObj=mtObj)
+	dat
 }
 
+
+### query data frame has two cols: tbl and vrb
+
 buildQuery <- function(inDF = NULL, inCSV = "", joins = list()) {
-	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
-			          user="monetdb", password="monetdb")                 # 
+	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs") 
 	if(file.exists(inCSV)){
 		## read from csv file
 		inDF <- read_csv(inCSV)
 	} 
 	df <- inDF
 	slct <- createSelects(df)
-	jns <- createJoins(df, joins)
+	jns <- createJoins(unique(df$tbl), joins)
 	qry <- paste(c(slct, jns), collapse = " ")
 	xx <- dbGetQuery(conn, qry)
 	df$find <- paste0(df$tbl, "_", df$vrb)
@@ -50,6 +51,7 @@ buildQuery <- function(inDF = NULL, inCSV = "", joins = list()) {
 	for(cln in colnames(xx)) {
 		attributes(xx[[cln]]) <- jsonToCls(mm$clsmeta[which(mm$vrb == cln)])
 	}
+	dbDisconnect(conn)
 	xx
 }
 
@@ -62,24 +64,43 @@ createSelects <- function(df) {
 	sprintf("SELECT %s FROM %s", paste(slcts, collapse = ", "), df$tbl[1])
 }
 
-createJoins <- function(df, jnLst) {
-	jns <- c()
-	tb1 <- df$tbl[1]
-	for(tb in unique(df$tbl)[-1]) {
-		jnClms <- "mcsid" 
-		if(tb %in% names(jnLst)) {
-			jnClms <- c(jnClms, jnLst[[tb]])
-		} else if("def" %in% names(jnLst)) {
-			jnClms <- c(jnClms, jnLst$def)
-		}
-		j <- paste(sprintf("%s.%s = %s.%s", tb, jnClms, tb1, jnClms), 
-				   collapse = " AND ")
-		jj <- sprintf("INNER JOIN %s ON %s", tb, j)
-		jns <- c(jns, jj)
-	}
-	paste(jns, collapse = " \n")
+createJoins <- function(tbls, jn) {
+	jnStmt <- c()
+	tb1 = tbls[1]
+	tbls <- tbls[-1]
+	j <- vapply(tbls, 
+		   function(t) {
+			   stmt <- sprintf("INNER JOIN %s ON %s.mcsid = %s.mcsid", t, tb1, t)
+			   if(t %in% names(jn)) {
+				   ### etc ###
+				   j <- jn[[t]]
+				   add <- sprintf("\n\t%s.%s = %s.%s", 
+								  t, j$jnVrb, j$jn_tbl, j$jnVrb)
+				   stmt <- paste0(stmt, " AND ", add)
+			   }
+			   stmt
+		}, "")
+	paste(j, collapse = " \n")
 }
 
+# createJoins <- function(df, jnLst) {
+#     jns <- c()
+#     tb1 <- df$tbl[1]
+#     for(tb in unique(df$tbl)[-1]) {
+#         jnClms <- "mcsid" 
+#         if(tb %in% names(jnLst)) {
+#             jnClms <- c(jnClms, jnLst[[tb]])
+#         } else if("def" %in% names(jnLst)) {
+#             jnClms <- c(jnClms, jnLst$def)
+#         }
+#         j <- paste(sprintf("%s.%s = %s.%s", tb, jnClms, tb1, jnClms), 
+#                    collapse = " AND ")
+#         jj <- sprintf("INNER JOIN %s ON %s", tb, j)
+#         jns <- c(jns, jj)
+#     }
+#     paste(jns, collapse = " \n")
+# }
+# 
 getMQ <- function(conn, df) {
 	sl <- "SELECT * FROM jsonmeta WHERE clstable IN(%s)"
 	tbls <- paste(paste0("'", unique(df$tbl), "'"), collapse = ", " )

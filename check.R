@@ -18,9 +18,12 @@ checkAvgs <- function(a, b) {
 	TRUE
 }
 
+rawNumFromString <- function(s) {
+	sum(as.numeric(charToRaw(s)))
+}
+
 # f <- dd[2]
-# conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs",  # 
-#                       user="monetdb", password="monetdb")               # 
+# conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs")  # 
 # tbl <- "mcs5_cm_assessment"
 # newTab <- dbGetQuery(conn, paste0("SELECT * FROM ", tbl))
 # rawTab <- getDataFromSav(f)

@@ -1,6 +1,47 @@
 library(dplyr)
 
+
+####
+# some simple functions to add new and update clsmeta objects
+
+createCLS <- function(nm) {
+	out <- list()
+	ctg <- data.frame(code = c(), label = c(), missing = c())
+	out$vName <- nm
+	out$label <- ""
+	out$ctg <- ctg
+	structure(out, class = "cls")
+}
+
+setCLSvLabel <- function(cls, lb) {
+	cls$label <- lb
+	cls
+}
+
+addCtg <- function(cls, vlb, mss) {
+	ctg <- data.frame(code = as.numeric(vlb),
+					  label = names(vlb), stringsAsFactors = FALSE)
+	ctg$missing <- FALSE
+	ctg$missing[which(ctg$code %in% mss)] <- TRUE
+	cls$ctg <- rbind(cls$ctg, ctg)
+	cls
+}
+
+####
+
 savToCls <- function(att ) {
+	out <- createCLS(att$vnm)
+	if(!is.null(att$labels)) {
+		if(!is.null(att$na_values)) {
+			att$na_values <- c()
+		}
+		out <- addCtg(out, att$labels, att$na_values)
+	}
+	if(!is.null(att$label)) out <- setCLSvLabel(out, att$label)
+	out
+}
+
+savToCls_old <- function(att ) {
 	## x = spss labelled variable
 	out <- list()
 	if(!is.null(att$labels)) {
