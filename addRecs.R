@@ -23,7 +23,7 @@ addRec <- function(d, m = NULL, dbHome =  "/home/db/mcs/") {
 	rawTab <- getDataFromSav(d)
 	chk <- checkAvgs(rawTab, newTab)
 	dbDisconnect(conn)
-	out <- list(table = tbl, check = chk, cmd = cmd, res = res)
+	out <- list(table = prep$tblNm, check = chk, cmd = cmd, res = res, prep=prep)
 	tmStmp <- format(Sys.time(), "_%Y%m%dt%H%M")
 	outFl <- file.path(dbHome, "dblog", paste0(prep$tblNm, tmStmp, ".Rda"))
 	save(out, file = outFl)
@@ -119,3 +119,12 @@ getDBType <- function(x) {
 	}
 }
 
+resetDB <- function() {
+	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs")  # 
+	f <- dbListTables(conn)
+	for(tbl in f[-1]) {
+		dbSendQuery(conn, paste0("DROP TABLE ", tbl, ";"))
+	}
+	dbDisconnect(conn)
+	system("mclient -d mcs -i /home/db/cls_db/jsonSchm.sql", intern = TRUE)
+}

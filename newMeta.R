@@ -141,10 +141,12 @@ rawNumFromString <- function(s) {
 # 
 
 resetDB <- function(conn) {
+	conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs")  # 
 	f <- dbListTables(conn)
 	for(tbl in f[-1]) {
 		dbSendQuery(conn, paste0("DROP TABLE ", tbl, ";"))
 	}
+	dbDisconnect(conn)
 	system("mclient -d mcs -i /home/db/cls_db/jsonSchm.sql", intern = TRUE)
 }
 
