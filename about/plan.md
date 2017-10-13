@@ -2,20 +2,39 @@
 
 ## Ingesting data
 
-* Ingest (addrecs) from SPSS file (done)
-	* From separate data frame and list (CSV/json files)
-	* Add single variable to to existing table (addvars)
-* Updates scripts?
-* Ingesting directly from SIR
+* Ingest (addrecs) from SPSS file
+	* From separate data frame and list
+	* Add single variable to existing table
+* Ingesting directly from SIR schema and data
 
 ## Checks and testing
 
 * On ingest - check number of rows, and a mean for each variable
 	* Also do the same for a random 10% sample (to check for rows switching)
+* On update - before/after checking/tests?
+
+## Development
+
+* Processes/functions/tests for updating raw data (SQL)
+* Processes/functions/tests for updating metadata (R/Python)
+
+### Backing up
+* Create backups
+* Roll back to previous versions
+* Have live and development databases
 
 ## Retrievals
 
-At the moment, we build queries using R programs that include using a data frame for a list of the tables and variables to retrieve. From there, it will be in memory - so you can do whatever you like with it, as part of the program you are writing.
+### Deposit
 
-[handy SO post](https://stackoverflow.com/questions/39169494/human-readable-hard-coding-dataframe-in-r)
+### Feed Forward
 
+### One-off requests for data
+
+### Simple Retrievals (eg all data in a table)
+
+
+
+## Shiny / GUI
+
+(Data linkage? Data access?)
