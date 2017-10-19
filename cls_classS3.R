@@ -109,7 +109,21 @@ clsFq <- function(x) {
 	structure(out, class = "clsFq")
 }
 
-
+clsdbFq <- function(tb, clsObj) {
+	colnames(tb) <- c("code", "frequency")
+	tb <- left_join(tb, clsObj$ctg)
+	mss <- tb[which(tb$missing == TRUE),]
+	tb <- tb[which(tb$missing == FALSE),]
+	tb$percent <- tb$frequency / sum(tb$frequency)
+	totalValid <- sum(tb$frequency)
+	totalMissing <- sum(mss$frequency)
+	percValid <- round(totalValid / (totalValid + totalMissing), 4)*100
+	percMissing <- round(totalMissing / (totalValid + totalMissing), 4)*100
+	out <- list(tb = tb, mss = mss, totalValid = totalValid, 
+				totalMissing = totalMissing, percValid = percValid,
+				percMissing = percMissing, att = clsObj)
+	structure(out, class = "clsFq")
+}
 
 
 

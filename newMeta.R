@@ -82,14 +82,15 @@ getDataFromSav <- function(f) {
 
 getDBType <- function(x) {
 	if(all(is.na(x))) {
-        return("TINYINT")
+        return("SMALLINT")
     }
 	if(is.numeric(x)) {
 		x <- x[which(!is.na(x))]
 		if(all(floor(x) == x)) {
-			if(all(x %in% -127:127)) {
-				return("TINYINT")
-			} else if(all(x %in% -32767:32767)) {
+			# if(all(x %in% -127:127)) {
+			#	return("TINYINT")
+			# } else if(all(x %in% -32767:32767)) {
+			if(all(x %in% -32767:32767)) {
 				return("SMALLINT")
 			} else{
 				return("INT")
