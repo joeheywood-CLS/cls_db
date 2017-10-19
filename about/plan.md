@@ -1,5 +1,5 @@
-# Aims and objectives
-
+# Objectives/functions of DB
+ 
 ## Ingesting data
 
 * Ingest (addrecs) from SPSS file
