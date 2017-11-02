@@ -1,9 +1,14 @@
 library(dplyr)
 
+###############################################################################
+# The 'cls' class is very simple. It is similar to labelled and jsonstat 
+# objects. It includes, as standard, a vName string, a label string, and 
+# labelled values. I have also included some more values below that use this
+# class to give labelled frequency tables/cross-tabs etc.
+###############################################################################
 
-####
-# some simple functions to add new and update clsmeta objects
-
+## creates a new (empty) CLS object
+## args: nm (character) name of variable
 createCLS <- function(nm) {
 	out <- list()
 	ctg <- data.frame(code = c(), label = c(), missing = c())
@@ -29,7 +34,7 @@ addCtg <- function(cls, vlb, mss) {
 
 ####
 
-savToCls <- function(att ) {
+savToCls <- function(att) {
 	out <- createCLS(att$vnm)
 	if(!is.null(att$labels)) {
 		if(!is.null(att$na_values)) {
@@ -39,25 +44,6 @@ savToCls <- function(att ) {
 	}
 	if(!is.null(att$label)) out <- setCLSvLabel(out, att$label)
 	out
-}
-
-savToCls_old <- function(att ) {
-	## x = spss labelled variable
-	out <- list()
-	if(!is.null(att$labels)) {
-		ctg <- data.frame(code = as.numeric(att$labels),
-						  label = names(att$labels), stringsAsFactors = FALSE)
-		ctg$missing <- FALSE
-		if(!is.null(att$na_values)) {
-			ctg$missing[which(ctg$code %in% att$na_values)] <- TRUE
-		}
-	} else {
-		ctg <- data.frame(code = c(), label = c(), missing = c())
-	}
-	out$vName <- att$vnm
-	out$label <- att$label
-	out$ctg <- ctg
-	structure(out, class = "cls")
 }
 
 

@@ -7,6 +7,7 @@ library(DBI)
 source("/home/db/cls_db/check.R")
 source("/home/db/cls_db/cls_classS3.R")
 
+## connect to database
 connect <- function(){
 	readRenviron("/home/db/.Renviron")
 	drb <- dbDriver("PostgreSQL")
@@ -14,10 +15,20 @@ connect <- function(){
 			  password = Sys.getenv("api_password"))
 }
 
+################################################################################
+# This function takes either a single .sav file or data frame and metadata 
+# objects as arguments and uses them to create a new table in the database. It
+# does this by creating a prep directory, where the data is stored in a pipe
+# delimited file and the metadata is stored in a json file. These files are 
+# added to the database and then tested using the functions in check.R to 
+# validate. The results of this process are stored in several objects and then 
+# saved in Rda files
+###############################################################################
+
+
 ## Main add rec file using either a sav file or csv and separate metadata
 ## args: d - data file (if sav) or a data frame, m: metadata list
-addRec <- function(d, m = NULL, dbHome =  "/home/db/mcs/") {
-	prepHome <- file.path(dbHome, "dbprep_pg")
+addRec <- function(d, m = NULL, tblNm = NULL, dbHome =  "/home/db/mcs/dbprep_pg") {
 	# look either for data in memory - or sav files
 	if(is.character(d) & grepl(".sav$", d)) { 
 		prep <- addRecPrepFromSav(d)
@@ -60,7 +71,10 @@ addRecPrep <- function(tblNm, data, meta, prepHome =  "/home/db/mcs/dbprep") {
 	structure(out, class = "addrec")
 }
 
-
+## Create the directory for the prep files for a given table
+## args: prepHome (character) where new directory should be located,
+##       tblNm (character) name of table
+## value: list of full file paths to home of new directory and the other prep files
 createPrepDir <- function(prepHome, tblNm) {
 	prepHome = file.path(prepHome, tblNm)
 	if(!dir.exists(prepHome))dir.create(prepHome)
@@ -70,6 +84,9 @@ createPrepDir <- function(prepHome, tblNm) {
 		 metFl = file.path(prepHome, paste0(tblNm, "_meta.dat")))
 }
 
+## Wrapper around addRecPrep for spss .sav files only. 
+## gets separate metadata and data from the sav file then runs AddRecPrep
+## args f (character) filepath to sav file
 addRecPrepFromSav <- function(f, prepHome = "/home/db/mcs/dbprep_pg/") {
 	st <- Sys.time()
 	tblNm <- gsub(".sav", "", basename(f))
@@ -102,6 +119,10 @@ getDataFromSav <- function(f) {
 	df
 }
 
+
+## helper function to get the correct dbtype for a given vector
+## args: x (mixed) vector to go into the database
+## value (character) type of database to be included in DB schema statement
 getDBType <- function(x) {
 	if(all(is.na(x))) {
         return("TINYINT")

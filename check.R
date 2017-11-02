@@ -1,5 +1,12 @@
-library(haven)
+###############################################################################
+# Checking function to compare two data.frames. Checks that the dimensions are
+# the same, that the mean average is the precisely the same and that the mean
+# of a random sample is the same
+###############################################################################
 
+## checks averages of two data frames
+## a and b (data.frame) data frames that should be identical
+## value TRUE if succeeds, else stops program
 checkAvgs <- function(a, b) {
 	if(!ncol(a) == ncol(b) & nrow(a) == nrow(b)) return(FALSE)
 	for(col in ncol(a)) {
@@ -18,17 +25,9 @@ checkAvgs <- function(a, b) {
 	TRUE
 }
 
+## helper function to convert a character string to a numeric value 
 rawNumFromString <- function(s) {
 	sum(as.numeric(charToRaw(s)))
 }
 
-# f <- dd[2]
-# conn <- dbConnect(MonetDB.R(), host="localhost", dbname="mcs")  # 
-# tbl <- "mcs5_cm_assessment"
-# newTab <- dbGetQuery(conn, paste0("SELECT * FROM ", tbl))
-# rawTab <- getDataFromSav(f)
-# newTab <- newTab[1:200,1:100]
-# rawTab <- rawTab[1:200,1:100]
-# microbenchmark(checkAverages(rawTab, newTab),
-#                checkAvgs(rawTab,newTab), n = 500)
-# 
+ 
